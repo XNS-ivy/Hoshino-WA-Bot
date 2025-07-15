@@ -13,6 +13,7 @@ export interface ParsedMessage {
   sender: string
   fromMe: boolean
   isMedia: boolean
+  expiration?: number | null
   mediaData: {
     mimetype: string
     caption: string
@@ -33,7 +34,7 @@ export default function parseMessage(msg: WAMessage): ParsedMessage {
   const denied = ['senderKeyDistributionMessage', 'messageContextInfo']
   const availableTypes = Object.keys(message || {})
   const type = availableTypes.reverse().find(t => !denied.includes(t)) ?? 'unknown'
-
+  const expiration = (message as any)?.[type]?.contextInfo?.expiration || null
   let text = ''
   if (type === 'conversation') {
     text = (message as { conversation?: string })?.conversation || ''
@@ -81,6 +82,7 @@ export default function parseMessage(msg: WAMessage): ParsedMessage {
     sender,
     fromMe,
     isMedia,
-    mediaData
+    expiration,
+    mediaData,
   }
 }

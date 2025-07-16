@@ -1,8 +1,12 @@
+import getPrefix from '../../getPrefix.js'
 import type { WAMessage, WAMessageKey } from 'baileys'
+
+
 
 /**
  * Structured result of a message
  */
+
 export interface ParsedMessage {
   key: WAMessageKey
   pushName?: string | null | undefined
@@ -22,6 +26,10 @@ export interface ParsedMessage {
     fileSha256?: string
     fileEncSha256?: string
     type: string
+  } | null,
+  commands: {
+    name: string,
+    args: string[],
   } | null
 }
 
@@ -55,7 +63,7 @@ export default function parseMessage(msg: WAMessage): ParsedMessage {
     'documentMessage'
   ]
   const isMedia = mediaTypes.includes(type)
-
+  const commands = initCommands(text) ?? null
   let mediaData = null as ParsedMessage['mediaData']
   if (isMedia) {
     const content = (message as any)[type]
@@ -84,5 +92,16 @@ export default function parseMessage(msg: WAMessage): ParsedMessage {
     isMedia,
     expiration,
     mediaData,
+    commands,
+  }
+}
+
+function initCommands(text: string): ParsedMessage['commands'] {
+  const prefix = getPrefix()
+  const [cmd, ...args] = text.trim().slice(prefix.length).split(/\s+/)
+  if(!text.startsWith(prefix)) return null
+  else return {
+      name: cmd,
+      args: args,
   }
 }

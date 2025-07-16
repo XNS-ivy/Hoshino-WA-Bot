@@ -11,7 +11,8 @@ import fs from 'fs'
 import path from 'path'
 import pino from 'pino'
 import msg from './handleMessage.js'
-import debugMode  from '../../debugMode.js'
+import debugMode from '../../debugMode.js'
+import loadCommand from '../../modules/loadCommand.js'
 
 const AUTH_FILE = path.resolve('./auth.json')
 const QR_FILE = path.resolve('./qr.png')
@@ -78,6 +79,7 @@ async function generateQR(qr: string): Promise<void> {
 }
 
 export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
+  const commands = await loadCommand()
   const { version } = await fetchLatestBaileysVersion()
   let state = loadAuthState()
 
@@ -138,12 +140,24 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
     }
   })
 
-  sock.ev.on('messages.upsert', ({ type, messages }) => {
+  sock.ev.on('messages.upsert', async ({ type, messages }) => {
     if (type === 'notify') {
       for (const message of messages) {
         if (!message.pushName) break
         const fetchMessage = msg(message)
-        if(debugMode()) console.log(fetchMessage)
+        if (debugMode()) console.log(fetchMessage)
+        if (fetchMessage.commands) {
+          const cmd = commands.get(fetchMessage.commands.name)
+          if (cmd) {
+            const result = await cmd.execute({
+              key: fetchMessage.key,
+              pushName: fetchMessage.pushName!,
+              cmd: fetchMessage.commands.name,
+              args: fetchMessage.commands.args,
+            })
+            console.log(result)
+          }
+        }
       }
     }
   })

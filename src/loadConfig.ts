@@ -2,8 +2,9 @@ import fs from 'fs'
 import path from 'path'
 
 export type ConfigSignal = {
-    name: string
-    debugLog: boolean
+    name: string,
+    debugLog: boolean,
+    prefix: string,
 }
 
 export default function loadconfig(): ConfigSignal {

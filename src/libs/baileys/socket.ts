@@ -11,14 +11,15 @@ import fs from 'fs'
 import path from 'path'
 import pino from 'pino'
 import msg from './handleMessage.js'
+import debugMode  from '../../debugMode.js'
 
 const AUTH_FILE = path.resolve('./auth.json')
 const QR_FILE = path.resolve('./qr.png')
 
 interface BaileysError extends Error {
   output?: {
-    statusCode?: number;
-  };
+    statusCode?: number
+  }
 }
 
 interface AuthState {
@@ -120,7 +121,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
       saveAuthState(state)
     }
     if (connection === 'close') {
-      const statusCode = (lastDisconnect?.error as BaileysError)?.output?.statusCode;
+      const statusCode = (lastDisconnect?.error as BaileysError)?.output?.statusCode
       const isLoggedOut = statusCode === DisconnectReason.loggedOut
 
       console.log('❌ Disconnected:', lastDisconnect?.error?.message)
@@ -142,7 +143,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
       for (const message of messages) {
         if (!message.pushName) break
         const fetchMessage = msg(message)
-        console.log(fetchMessage)
+        if(debugMode()) console.log(fetchMessage)
       }
     }
   })

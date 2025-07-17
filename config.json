@@ -1,5 +1,5 @@
 {
     "name": "Hoshino",
-    "debugLog": true,
+    "debugLog": false,
     "prefix": "."
 }

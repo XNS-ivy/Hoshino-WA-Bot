@@ -9,13 +9,17 @@ const __dirname = path.dirname(__filename)
 const commandDir = path.resolve(__dirname, '../commands')
 
 export interface CommandContent {
-    cmd: string
     args?: string[]
-    pushName: string
-    key: WAMessageKey
+    pushName?: string
+    key?: WAMessageKey
 }
 
-type CommandResult = string | number | object | void | string[]
+type CommandResult = { 
+    text: string | null,
+    type: string | null,
+    url: string | null,
+    caption: string | null,
+ }
 
 export type CommandModule = {
     name: string
@@ -45,7 +49,7 @@ export default async function loadCommand(): Promise<Map<string, CommandModule>>
                 const fileUrl = pathToFileURL(fullPath).href
                 const mod: { default: CommandModule } = await import(fileUrl)
                 if (mod.default?.name) {
-                  commandMap.set(mod.default.name, mod.default)
+                    commandMap.set(mod.default.name, mod.default)
                 }
             }
         }

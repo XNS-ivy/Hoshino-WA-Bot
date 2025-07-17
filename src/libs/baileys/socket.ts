@@ -13,7 +13,6 @@ import pino from 'pino'
 import msg from './handleMessage.js'
 import debugMode from '../../debugMode.js'
 import loadCommand from '../../modules/loadCommand.js'
-
 const AUTH_FILE = path.resolve('./auth.json')
 const QR_FILE = path.resolve('./qr.png')
 
@@ -108,7 +107,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
         }
       }
     },
-    logger: pino.default({ level: 'warn' })
+    logger: pino.default({ level: debugMode() ? 'debug' : 'silent' })
   })
 
   sock.ev.on('creds.update', () => {
@@ -141,21 +140,21 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
   })
 
   sock.ev.on('messages.upsert', async ({ type, messages }) => {
-    if (type === 'notify') {
-      for (const message of messages) {
-        if (!message.pushName) break
-        const fetchMessage = msg(message)
-        if (debugMode()) console.log(fetchMessage)
-        if (fetchMessage.commands) {
-          const cmd = commands.get(fetchMessage.commands.name)
-          if (cmd) {
-            const result = await cmd.execute({
-              key: fetchMessage.key,
-              pushName: fetchMessage.pushName!,
-              cmd: fetchMessage.commands.name,
-              args: fetchMessage.commands.args,
-            })
-            console.log(result)
+    if (type != 'notify') return
+    for (const message of messages) {
+      if (!message.pushName) break
+      const fetchMessage = msg(message)
+      if (debugMode()) console.log(fetchMessage)
+      if (fetchMessage?.commands) {
+        const cmd = commands.get(fetchMessage.commands.name)
+        if (cmd) {
+          const result = await cmd.execute({
+            key: fetchMessage.key,
+            pushName: fetchMessage.pushName!,
+            args: fetchMessage.commands.args,
+          })
+          if (result != null || result != undefined) {
+            if (result.type == 'text') sock.sendMessage(fetchMessage.from, { text: toText(result.text) }, { ephemeralExpiration: fetchMessage.expiration ?? undefined, quoted: message })
           }
         }
       }
@@ -163,4 +162,10 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
   })
 
   return sock
+}
+
+function toText(r: unknown): string {
+  return typeof r === 'object'
+    ? JSON.stringify(r, null, 2)
+    : String(r)
 }

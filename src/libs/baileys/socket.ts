@@ -73,6 +73,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
     },
     logger: pino.default({ level: debugMode() ? 'debug' : 'silent' }),
     shouldSyncHistoryMessage: () => false,
+    generateHighQualityLinkPreview: true,
   })
 
   sock.ev.on('creds.update', () => {
@@ -128,6 +129,19 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
                 ephemeralExpiration: fetchMessage.expiration ?? undefined,
                 quoted: message
               })
+            }
+            if (result.type === 'image') {
+              const imageUrl = result.url
+              const caption = result.caption
+              if (imageUrl && caption) {
+                await sock.sendMessage(fetchMessage.from, {
+                  image: { url: imageUrl },
+                  caption
+                }, {
+                  quoted: message,
+                  ephemeralExpiration: fetchMessage.expiration ?? undefined
+                })
+              }
             }
           }
         }

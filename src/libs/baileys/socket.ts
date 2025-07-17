@@ -1,86 +1,43 @@
+const originalConsoleLog = console.log
+console.log = (...args: unknown[]) => {
+  const msg = args[0]
+  if (typeof msg === 'string' &&
+    (msg.includes('Closing open session') ||
+      msg.includes('Closing session: SessionEntry'))
+  ) return
+  originalConsoleLog.apply(console, args as [unknown?, ...unknown[]])
+}
+
 import {
   makeWASocket as hoshino,
   fetchLatestBaileysVersion,
   DisconnectReason,
-  initAuthCreds,
-  BufferJSON,
-  SignalDataSet
+  type SignalDataSet,
+  type GroupMetadata
 } from 'baileys'
-import QRCode from 'qrcode'
-import fs from 'fs'
-import path from 'path'
 import pino from 'pino'
+import NodeCache from 'node-cache'
 import msg from './handleMessage.js'
 import debugMode from '../../debugMode.js'
 import loadCommand from '../../modules/loadCommand.js'
-const AUTH_FILE = path.resolve('./auth.json')
-const QR_FILE = path.resolve('./qr.png')
+import {
+  loadAuthState,
+  saveAuthState,
+  generateQR,
+  cleanupAuthFiles,
+  type AuthState
+} from './authState.js'
+
+const groupCache = new NodeCache({ stdTTL: 60 * 10 })
 
 interface BaileysError extends Error {
-  output?: {
-    statusCode?: number
-  }
-}
-
-interface AuthState {
-  creds: ReturnType<typeof initAuthCreds>
-  keys: { [key: string]: Record<string, any> }
-}
-
-function initKeysStructure(): AuthState['keys'] {
-  return {
-    preKeys: {},
-    sessions: {},
-    senderKeys: {},
-    appStateSyncKeys: {},
-    appStateVersions: {},
-    senderKeyMemory: {}
-  }
-}
-
-function loadAuthState(): AuthState {
-  try {
-    if (fs.existsSync(AUTH_FILE)) {
-      const raw = fs.readFileSync(AUTH_FILE, 'utf-8')
-      const data = JSON.parse(raw, BufferJSON.reviver) as Partial<AuthState>
-      return {
-        creds: data.creds ?? initAuthCreds(),
-        keys: data.keys ?? initKeysStructure()
-      }
-    }
-  } catch (err) {
-    console.error('⚠️ Failed to load auth:', err)
-  }
-  return {
-    creds: initAuthCreds(),
-    keys: initKeysStructure()
-  }
-}
-
-function saveAuthState(state: AuthState): void {
-  try {
-    fs.writeFileSync(AUTH_FILE, JSON.stringify(state, BufferJSON.replacer, 2))
-  } catch (err) {
-    console.error('❌ Failed to save auth state:', err)
-  }
-}
-
-async function generateQR(qr: string): Promise<void> {
-  if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE)
-  try {
-    const termQR = await QRCode.toString(qr, { type: 'terminal', small: true })
-    console.log('🔐 Scan QR Code:\n' + termQR)
-    await QRCode.toFile(QR_FILE, qr)
-    console.log(`💾 QR Code saved to: ${QR_FILE}`)
-  } catch (err) {
-    console.error('❌ Failed to generate QR code:', err)
-  }
+  output?: { statusCode?: number }
 }
 
 export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
   const commands = await loadCommand()
   const { version } = await fetchLatestBaileysVersion()
-  let state = loadAuthState()
+  let state: AuthState = loadAuthState()
 
   const sock = hoshino({
     version,
@@ -107,7 +64,15 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
         }
       }
     },
-    logger: pino.default({ level: debugMode() ? 'debug' : 'silent' })
+    cachedGroupMetadata: async (jid: string): Promise<GroupMetadata | undefined> => {
+      const cached = groupCache.get(jid) as GroupMetadata | undefined
+      if (cached) return cached
+      const fresh = await sock.groupMetadata(jid)
+      groupCache.set(jid, fresh)
+      return fresh
+    },
+    logger: pino.default({ level: debugMode() ? 'debug' : 'silent' }),
+    shouldSyncHistoryMessage: () => false,
   })
 
   sock.ev.on('creds.update', () => {
@@ -129,8 +94,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
 
       if (isLoggedOut) {
         console.log('🚫 Logged out, cleaning up...')
-        fs.existsSync(AUTH_FILE) && fs.unlinkSync(AUTH_FILE)
-        fs.existsSync(QR_FILE) && fs.unlinkSync(QR_FILE)
+        cleanupAuthFiles()
         process.exit(1)
       } else {
         console.log('♻️ Attempting reconnect in 5s...')
@@ -140,10 +104,15 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
   })
 
   sock.ev.on('messages.upsert', async ({ type, messages }) => {
-    if (type != 'notify') return
+    if (type !== 'notify') return
     for (const message of messages) {
-      if (!message.pushName) break
+      if (!message.pushName) continue
       const fetchMessage = msg(message)
+      if (fetchMessage.key.remoteJid?.endsWith('@g.us')) {
+        const jid = fetchMessage.key.remoteJid
+        const metadata = await sock.groupMetadata(jid)
+        groupCache.set(jid, metadata)
+      }
       if (debugMode()) console.log(fetchMessage)
       if (fetchMessage?.commands) {
         const cmd = commands.get(fetchMessage.commands.name)
@@ -153,12 +122,23 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
             pushName: fetchMessage.pushName!,
             args: fetchMessage.commands.args,
           })
-          if (result != null || result != undefined) {
-            if (result.type == 'text') sock.sendMessage(fetchMessage.from, { text: toText(result.text) }, { ephemeralExpiration: fetchMessage.expiration ?? undefined, quoted: message })
+          if (result != null) {
+            if (result.type === 'text') {
+              sock.sendMessage(fetchMessage.from, { text: toText(result.text) }, {
+                ephemeralExpiration: fetchMessage.expiration ?? undefined,
+                quoted: message
+              })
+            }
           }
         }
       }
     }
+  })
+
+  sock.ev.on('group-participants.update', async (update) => {
+    console.log('🔔 Updating metadata for group : ', update.id)
+    const metadata = await sock.groupMetadata(update.id)
+    groupCache.set(update.id, metadata)
   })
 
   return sock

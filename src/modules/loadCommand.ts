@@ -33,7 +33,7 @@ export type CommandModule = {
  * Recursively scan `commands/` and dynamically import each .js,
  * returning a map from command.name → CommandModule
  */
-export default async function loadCommand(): Promise<Map<string, CommandModule>> {
+export async function loadCommand(): Promise<Map<string, CommandModule>> {
     const commandMap = new Map<string, CommandModule>()
 
     async function scanDir(dir: string): Promise<void> {

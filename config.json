@@ -1,5 +1,6 @@
 {
     "name": "Hoshino",
     "debugLog": false,
-    "prefix": "."
+    "prefix": ".",
+    "readMessage": false
 }

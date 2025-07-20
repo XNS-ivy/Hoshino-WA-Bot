@@ -1,10 +1,12 @@
+import { getPrefix } from '../../loadConfig.js'
 import { findAnimeMovie } from '../../modules/jikanAPI.js'
 import { CommandContent } from '../../modules/loadCommand.js'
 
 export default {
   name: 'findanime',
-  desc: 'Search anime info from Jikan API',
+  desc: 'Search anime information from Jikan API',
   premium: false,
+  usage: `${getPrefix()}findanime charlotte`,
   execute: async ({ args }: CommandContent) => {
     const title = args?.join(' ')
     if (!title) {

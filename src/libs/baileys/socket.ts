@@ -18,8 +18,8 @@ import {
 import pino from 'pino'
 import NodeCache from 'node-cache'
 import msg from './handleMessage.js'
-import debugMode from '../../debugMode.js'
-import loadCommand from '../../modules/loadCommand.js'
+import { debugMode, getReadMessage } from '../../loadConfig.js'
+import { loadCommand } from '../../modules/loadCommand.js'
 import {
   loadAuthState,
   saveAuthState,
@@ -109,6 +109,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
     for (const message of messages) {
       if (!message.pushName) continue
       const fetchMessage = msg(message)
+      if (getReadMessage()) sock.readMessages([fetchMessage.key])
       if (fetchMessage.key.remoteJid?.endsWith('@g.us')) {
         const jid = fetchMessage.key.remoteJid
         const metadata = await sock.groupMetadata(jid)

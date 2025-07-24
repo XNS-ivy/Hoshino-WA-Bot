@@ -1,3 +1,3 @@
-import sock from "./libs/baileys/socket.js"
+import sock from "@baileysLibs/socket.js"
 
 await sock()

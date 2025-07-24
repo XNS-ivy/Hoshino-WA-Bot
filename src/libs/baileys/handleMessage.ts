@@ -1,4 +1,4 @@
-import { getPrefix } from '../../loadConfig.js'
+import { getPrefix } from "@src/loadConfig.js"
 import type { WAMessage, WAMessageKey } from 'baileys'
 
 

@@ -8,6 +8,17 @@
     "strict": true,
     "esModuleInterop": true,
     "baseUrl": "./src",
+    "paths": {
+      "@src/*": ["*"],
+      "@modules/*": ["modules/*"],
+      "@baileysLibs/*": ["libs/baileys/*"],
+      "@translateLibs/*": ["libs/translate/*"],
+      "@openaiLibs/*": ["libs/openai/*"],
+    },
+    "plugins": [
+      { "transform": "typescript-transform-paths" },
+      { "transform": "typescript-transform-paths", "afterDeclarations": true }
+    ],
     "skipLibCheck": true,
   },
   "include": ["src"]

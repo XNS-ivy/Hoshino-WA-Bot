@@ -17,16 +17,16 @@ import {
 } from 'baileys'
 import pino from 'pino'
 import NodeCache from 'node-cache'
-import msg from './handleMessage.js'
-import { debugMode, getReadMessage } from '../../loadConfig.js'
-import { loadCommand } from '../../modules/loadCommand.js'
+import msg from '@baileysLibs/handleMessage.js'
+import { debugMode, getReadMessage } from '@src/loadConfig.js'
+import { loadCommand } from '@modules/loadCommand.js'
 import {
   loadAuthState,
   saveAuthState,
   generateQR,
   cleanupAuthFiles,
   type AuthState
-} from './authState.js'
+} from '@baileysLibs/authState.js'
 
 const groupCache = new NodeCache({ stdTTL: 60 * 10 })
 
@@ -123,6 +123,7 @@ export default async function waSocket(): Promise<ReturnType<typeof hoshino>> {
             key: fetchMessage.key,
             pushName: fetchMessage.pushName!,
             args: fetchMessage.commands.args,
+            sender: fetchMessage.sender,
           })
           if (result != null) {
             if (result.type === 'text') {

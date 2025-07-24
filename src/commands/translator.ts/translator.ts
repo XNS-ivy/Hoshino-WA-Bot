@@ -3,11 +3,11 @@ import {
     getLanguage,
     findLanguage,
     isValidLanguageCode,
-} from "../../libs/translate/translate.js"
+} from "@translateLibs/translate.js"
 
 import { languages } from "google-translate-api-x"
-import { getPrefix } from "../../loadConfig.js"
-import { CommandContent } from "modules/loadCommand.js"
+import { getPrefix } from "@src/loadConfig.js"
+import { CommandContent } from "@modules/loadCommand.js"
 
 export default {
     name: 'translate',

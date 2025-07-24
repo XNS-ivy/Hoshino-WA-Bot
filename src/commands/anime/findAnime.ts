@@ -1,6 +1,6 @@
-import { getPrefix } from '../../loadConfig.js'
-import { findAnimeMovie } from '../../modules/jikanAPI.js'
-import { CommandContent } from '../../modules/loadCommand.js'
+import { getPrefix } from "@src/loadConfig.js"
+import { findAnimeMovie } from "@modules/jikanAPI.js"
+import { CommandContent } from "@modules/loadCommand.js"
 
 export default {
   name: 'findanime',

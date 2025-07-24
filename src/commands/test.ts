@@ -1,5 +1,5 @@
-import { CommandContent } from "../modules/loadCommand.js"
-import { debugMode } from "../loadConfig.js"
+import { CommandContent } from "@modules/loadCommand.js"
+import { debugMode } from "@src/loadConfig.js"
 
 export default {
     name: 'test',

@@ -1,4 +1,4 @@
-import { loadCommand, CommandContent } from "../modules/loadCommand.js"
+import { loadCommand, CommandContent } from "@modules/loadCommand.js"
 
 export default {
     name: 'menu',

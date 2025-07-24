@@ -12,6 +12,7 @@ export interface CommandContent {
     args?: string[]
     pushName?: string
     key?: WAMessageKey
+    sender?: string
 }
 
 type CommandResult = { 
